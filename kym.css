@@ -1,0 +1,66 @@
+body {font-family: 'Open Sans', sans-serif; font-weight: 300; font-size:13px;}
+    h1, h2, h3, h4 { font-family: 'Bree Serif', serif; color: #747678; }
+
+    table.blueTable {
+    border: 1px solid #ddd;
+    background-color:#f9f9f9;
+    width: 800px;
+    text-align: left;
+    border-radius: 10px;
+    -moz-border-radius: 10px;
+    padding: 2px;
+    margin-top: 5px;
+    }
+    table.blueTable td, table.blueTable th {
+    border-collapse: collapse;
+    }
+    table.blueTable tbody td {
+    font-size: 13px;
+    }
+    table.blueTable tr:nth-child(even) {
+    background: #e0e0e0;
+    }
+    table.blueTable thead th:first-child {
+    border-left: none;
+    }
+
+    .cLabel {
+    font-weight: bold;
+    font-size: 15px;
+    background-color: rgb(4, 49, 75);
+    color: #D0E4F5;
+    width: 70%;
+    }
+    .ctlabel {
+    padding: 2px 2px 2px 2px;
+    margin-left: 20px;
+    background-color: black;
+    color: white;
+    float:right !important;
+    }
+    .isloading {
+    background-image: url("js/loading.gif");
+    background-repeat: no-repeat;
+    background-image: right-align;
+    display: inline-block;
+    }
+
+    .i_item {
+    display:inline-block;
+    width: 250px;
+    background-color: black;
+    color: white;
+    margin: 2px;
+    width: 15px;
+    text-align: center;
+    }
+
+    .i_item:hover {color:yellow}
+    .tname {display: block; width: 200px;}
+    .tname:hover {color: wheat; background-color: black;}
+
+    .bnav { float: right; top:-30px;}
+
+    .oc {background-color: #C7FDFC; text-align: right; font-size: 16px; font-weight: bold; border: 2px solid; width: 40px;}
+    .oczero {background-color: rgb(207, 207, 207); text-align: right; font-size: 16px; color:rgb(63, 65, 66); border: 2px solid; width: 40px;}
+    .oblock {font-weight: bold; background-color: black; color:whitesmoke;}

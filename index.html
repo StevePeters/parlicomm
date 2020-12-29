@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Know your member</title>
+    <meta charset="utf-8">
+    
+    <!-- load jquery & datatables -->
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="jquery.formatDateTime.min.js"></script>
+    <script src="js/datatables.min.js"></script>
+    <script src="js/code/highcharts.js"></script>
+    <script src="js/chroma.min.js"></script>
+    <script src="js/colorbrewer.v1.js"></script>
+    
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif' rel='stylesheet' type='text/css'> 
+    <link href='js/datatables.css' rel='stylesheet' type='text/css'> 
+    <link href='js/code/css/highcharts.css' rel='stylesheet' type='text/css'> 
+    <link href='kym.css' rel='stylesheet' type='text/css'> 
+    
+    <script>
+        
+        $( document ).ready( drawViz );
+        
+        function drawViz() {
+            $("#loading").addClass("isloading").text('Loading..');
+            $( "#MP" ).prop( "disabled", true );
+            var dataCommittees, dataCMembers, dcurr, m_lookup=[], amp_list=[], a2z_lookup=[], a2z_index=[], a_over=[], alo_lookup=[], pParties=[], acl_out=[], acm_out=[], c_types=[], tmid, cntQ, cntS, d_max=new Date('1920-01-01'), d_min=new Date( '2029-01-01');
+
+            var committees_in = $.ajax({
+                url: 'https://dclgapps.communities.gov.uk/scriptLib/gf.php?url=https://raw.githubusercontent.com/StevePeters/parlicomm/master/c_committees.json',
+                dataType: "jsonp",
+                done: function (data) {dataCommittees=data.responseJSON.data; },
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert('Problem loading list of Committees - please try again later');
+                    return;
+                }
+             });
+
+             var cmembers_in = $.ajax({
+                url: 'https://dclgapps.communities.gov.uk/scriptLib/gf.php?url=https://raw.githubusercontent.com/StevePeters/parlicomm/master/c_members.json',
+                dataType: "jsonp",
+                done: function (data) { dataCMembers=data.responseJSON.data;},
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert('Problem loading list of committee members - please try again later');
+                    return;
+                }
+             });
+
+            /*
+            var r_committees = $.ajax({
+                url: 'http://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/Committees/',
+                dataType: "json",
+                complete: function (data) {
+                    console.log(data);
+                }
+             });
+             */
+            // get list of all current MPs for auto select
+            var members_hc_in = $.ajax({
+                url: 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/House=Commons%7CIsEligible=true/ParliamentaryPosts%7CGovernmentPosts%7COppositionPosts/',
+                dataType: "json",
+                done: function (data) {console.log(data);},
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert('Problem loading list of MPs - please try again later');
+                    return;
+                }
+             });
+            // get list of all current Lords for auto select
+             var members_hl_in = $.ajax({
+                url: 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/House=Lords%7CIsEligible=true/ParliamentaryPosts%7CGovernmentPosts%7COppositionPosts/',
+                dataType: "json",
+                done: function (data) {console.log(data);},
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert('Problem loading list of Lords - please try again later');
+                    return;
+                }
+             });
+        
+            var parties_in = $.ajax({
+            url: 'http://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/Parties/',
+                dataType: "json",
+                done: function (data) { console.log(data);},
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert('Problem loading list of Parties - please try again later');
+                    return;
+                }
+            });
+
+            var committee_types_in = $.ajax({
+            url: 'http://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/CommitteeTypes/',
+                dataType: "json",
+                done: function (data) { console.log(data);},
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert('Problem loading list of Committee types - please try again later');
+                    return;
+                }
+            });
+               
+            $.when( committees_in, cmembers_in, members_hc_in, members_hl_in, parties_in, committee_types_in ).done(function ( cc, cm, c_hm, l_hm, pp, ctypes ) {
+                // transform committees array
+                $("#loading").removeClass("isloading").text('');
+                var hasData=false;
+                if( cc[1]=='success') { hasData = true} 
+                if (!hasData) {
+                    return;
+                }
+                
+                amp_lookup = c_hm[0]['Members']['Member'];
+                alo_lookup = l_hm[0]['Members']['Member'];
+                pParties = pp[0]['Parties']['Party'];
+                c_types = ctypes[0].CommitteeTypes.CommitteeType;
+
+                dataCommittees=cc[0]['data'];
+                dcurr=new Date(dataCommittees[0]['logged_on']);
+                for (var i=0; i<dataCommittees.length; i++) {
+                    var tid='c' + dataCommittees[i]['id'];
+                    acl_out[tid]={
+                        url:dataCommittees[i]['url'],
+                        ctitle:dataCommittees[i]['ctitle'],
+                        cclass:dataCommittees[i]['cclass'],
+                        crole:dataCommittees[i]['crole'],
+                        asat:new Date(dataCommittees[i]['logged_on'])
+                    }
+                }
+                // transform committee members array
+                var dcm=cm[0]['data'];
+                for (var i=0; i<dcm.length; i++) {
+                    var id_m = 'm' + dcm[i]['memberid']
+                    if (typeof(acm_out[id_m]) == 'undefined') {
+                        acm_out[id_m]={
+                            ccount: 0
+                        }
+                    }
+                    id_c='c'+dcm[i]['id']
+                    acm_out[id_m][id_c]=[]
+                    acm_out[id_m]['ccount']++;
+                }
+                
+                amp_lookup=[].concat( c_hm[0].Members.Member, l_hm[0].Members.Member )
+                amp_lookup.sort( function(a, b){
+                    var nameA=a.ListAs.toLowerCase(), nameB=b.ListAs.toLowerCase();
+                    if (nameA < nameB) //sort string ascending
+                    return -1;
+                    if (nameA > nameB)
+                    return 1;
+                    return 0; 
+                });
+                
+                // build list of all MPs
+                for (var i=0; i<amp_lookup.length; i++) {
+                    var tmid='m' + amp_lookup[i]['@Member_Id'];
+                    amp_list[tmid]={
+                        name: amp_lookup[i]['DisplayAs'],
+                        party: amp_lookup[i]['Party']['#text'],
+                        const: amp_lookup[i]['MemberFrom'],
+                        gender: amp_lookup[i]['Gender'],
+                        img: 'https://data.parliament.uk/membersdataplatform/services/images/MemberPhoto/' + amp_lookup[i]['@Member_Id'],
+                        member_since: amp_lookup[i]['HouseStartDate'],
+                        posts_g: amp_lookup[i]['GovernmentPosts'],
+                        posts_p: amp_lookup[i]['ParliamentaryPosts'],
+                        posts_o: amp_lookup[i]['OppositionPosts']
+                    }
+                    var taz=amp_lookup[i]['ListAs'].substring(0,1);
+                    if (typeof a2z_lookup[taz] == 'undefined') {
+                        a2z_lookup[taz] = [];
+                        a2z_index.push({id:taz})
+                    }
+                    a2z_lookup[taz][tmid]={name: amp_lookup[i]['ListAs'], house: amp_lookup[i]['House']};
+                }
+                a2z_index.sort( function(a, b){
+                    var nameA=a.id.toLowerCase(), nameB=b.id.toLowerCase();
+                    if (nameA < nameB) //sort string ascending
+                    return -1;
+                    if (nameA > nameB)
+                    return 1;
+                    return 0; 
+                });
+                var arrayAuto = amp_lookup.map( function(e) {
+                        return {'id': e['@Member_Id'], 'value': e['DisplayAs'], house:e['House'], listAs: e['ListAs']}
+                })
+                arrayAuto.sort( function(a, b){
+                    var nameA=a.listAs.toLowerCase(), nameB=b.listAs.toLowerCase();
+                    if (nameA < nameB) //sort string ascending
+                    return -1;
+                    if (nameA > nameB)
+                    return 1;
+                    return 0; 
+                });
+                // set up auto complete for MP names
+                $( "#MP" ).prop( "disabled", false ).autocomplete({
+                    source: arrayAuto,
+                    minLength: 2,
+                    select: function( event, ui ) {
+                        $('#presel').text('To select another person, begin by typing their name here:');
+                        var tpid='m'+ui.item.id;
+                        tmid=ui.item.id;
+                        showDetails(tpid, tmid, ui.item.house)
+                    }
+                } ).focus( function(e) {
+                    $(this).val("")
+
+                }
+                ).autocomplete("instance")._renderItem =function( ul, item ) {
+                    if (item.house == 'Lords') { 
+                        var bgc='#9d0830'
+                    } else {
+                        var bgc='#006e46'
+                    }
+                    return $( "<li>" )
+                        .append( '<span style="width:12px; border: 2px solid white; background-color:' + bgc + '"> </span>' + item.label )
+                        .appendTo( ul );
+                    }
+                var tl='<p>Or select a member from the alphabetical lists below.</p>';
+                tl+='<p>Entries are coloured <span style="background-color: #006e46; color: white; display: inline-block">Green</span> for a member of the house of commons, ';
+                tl+='and <span style="background-color: #9d0830;color: white; display: inline-block;">Red</span> for a member of the house of lords</p>'; 
+                $(tl).appendTo( '#alist');
+                var ih="<ul id='tindex' style='width: 250px;'>";
+                for (var i=0; i<a2z_index.length; i++) {
+                    ih+='<li class="i_item" id="' + a2z_index[i].id + '">' + a2z_index[i].id + '</li>'
+                }
+                ih+='</ul>'
+
+                $(ih).appendTo( '#alist');
+                $('<div id="nameLists"></div>').appendTo( '#alist');
+
+                $('.i_item').click( function(e) {
+                    showNameIndex( this.innerText );
+                })
+                showNameIndex( 'A');
+                // show random entry for opening screen
+                var m12show = getRndInteger(0, amp_lookup.length);
+                var sel1= amp_lookup[m12show];
+                $('#presel').html('We have randomly selected <b>' + sel1['DisplayAs'] + '</b> to illustrate information available.<br>To select another person, begin by typing their name here:' )
+                showDetails('m' + sel1['@Member_Id'], sel1['@Member_Id'], sel1['House'])
+            }); // end when condition
+
+            function showNameIndex( tl) {
+                var tn = a2z_lookup[ tl ];
+                
+                var tl='<ul>'
+                for (var j in tn) {
+                    if (tn[j].house == 'Lords') { 
+                        var bgc='#9d0830'
+                    } else {
+                        var bgc='#006e46'
+                    }
+                    tl+='<li mid="' + j + '" house="' + tn[j].house + '" class="tname" style="color: white; background-color:' + bgc + '">' + tn[j].name + '</li>';
+                }
+                tl+='</ul>';
+                $('#nameLists').empty().html(tl);
+                $('.tname').click(function(e) {
+                    $('#presel').text('To select another person, begin by typing their name here:');
+                    var tpid=$(this).attr('mid');
+                    tmid=tpid.substring(1, tpid.length)
+                    showDetails(tpid, tmid, $(this).attr("house"));
+                })
+            } // showNameIndex( tl) 
+
+            function showDetails(tpid, tmid, inHouse) {
+                // build summary card
+                if (inHouse== 'Lords') { 
+                    var bgc='#9d0830'
+                } else {
+                    var bgc='#006e46'
+                }
+                $('#cmem').empty()
+                var tms=amp_list[tpid]
+                var ht='<a id="l_top"></a><table class="blueTable">'
+                ht+='<tr>'
+                ht+='<td colspan="3" style="height: 10px; background-color:' + bgc + '";></td>';
+                ht+='</tr><tr>';
+                ht+='<td style="vertical-align: top; align: right;"><img width="80" height="80" src="' + tms['img'] + '"/></td>'
+                ht+='<td style="width: 370px;">'                
+                ht+='<h3>' + tms.name + '</h3>'
+                ht+='<p>' + tms.const + '</p>'
+                ht+='</td><td "style="width: 370px;">';
+                $('#MP').val(tms.name)
+
+                ht+='<h3>' + tms.party + '</h3>'
+                ht+='<p>Member since ' + $.formatDateTime("d M yy", new Date(tms.member_since)) + '</p>'
+                ht+='</td>'
+                ht+='</tr>'
+                ht+='</table>'
+                $(ht).appendTo('#cmem');
+                
+                $('<h2>Overview</h2>').appendTo('#cmem');
+                $('<div id="Overview" style="width: 800px;"></div>').appendTo('#cmem');
+                
+                // show registered interests
+                $('<h2>Registered interests</h2>').appendTo('#cmem');
+                $('<div id="Interests" style="width: 800px;"></div>').appendTo('#cmem');
+
+                // get and show committee membership details  - disabled on 9th Dec because API is returning limited results
+                $('<div id="Committees"></div>').appendTo('#cmem');
+                $("<table><tr><td><h2>Committee membership</h2></td><td><a id='l_committees' href='#l_top' class='bnav'>Back to top</a></td></tr></table>").appendTo('#Committees');
+                ht = showCommittees();   
+                $(ht).appendTo('#Committees');
+
+                // get and show statements and questions
+                $('<table><tr><td><h2>Statements and questions</h2></td><td><a id="l_qands" href="#l_top" class="bnav">Back to top</a></td></tr></table>').appendTo('#cmem');
+                var cc='<figure class="highcharts-figure" style="width: 800px;">';
+                cc+='<div id="qChart"></div>';
+                cc+='<p class="highcharts-description" id="ccdesc"></p>';
+                cc+='</figure>'
+                $(cc).appendTo('#cmem');
+                
+                $('<div id="Questions" style="width: 800px;"></div>').appendTo('#cmem');
+                a_over.qands={w:0, o:0, s: 0}
+                getQuestions( tmid, inHouse);
+                
+                // show current and previous roles
+                a_over.roles={
+                    Government:{c:0, p: 0},
+                    Opposition:{c:0, p: 0},
+                    Parliamentary: {c:0, p: 0}
+                }
+                $('<table><tr><td><h2>Roles</h2></td><td><a id="l_roles" href="#l_top" class="bnav">Back to top</a></td></tr></table>').appendTo('#cmem');
+                if ( tms["posts_g"] !== null ) { var tin=tms["posts_g"]['GovernmentPost']} else {var tin=null};
+                ht=rt( tin, 'Government')
+                $(ht).appendTo('#cmem');
+
+                if ( tms["posts_o"] !== null ) { var tin=tms["posts_o"]['OppositionPost']} else {var tin=null};
+                ht=rt( tin, 'Opposition')
+                $(ht).appendTo('#cmem');
+
+                if ( tms["posts_p"] !== null ) { var tin=tms["posts_p"]['ParliamentaryPost']} else {var tin=null};
+                ht=rt( tin, 'Parliamentary')
+                $(ht).appendTo('#cmem');
+
+                function showCommittees() {
+                    a_over['commmittees'] =0;
+                    var ht='';
+                    var tstamp = 'As at ' + $.formatDateTime("d M yy", dcurr) + ', ';
+                    if (typeof(acm_out[tpid]) == 'undefined') {
+                        ht+='<p>' + tstamp + tms.name + ' is not a member of any parliamentary comittees.</p>';
+
+                    } else { // found committee membership
+                        var cc=acm_out[tpid]['ccount'];
+                        a_over['commmittees'] = cc;
+                        var px = "committee";
+                        if (cc>1) {px="committees"}
+                        ht+='<p>' + tstamp + tms.name + ' is a member of ' + cc + ' parliamentary ' + px +':</p>';
+                        
+                        // add committee details
+                        for (var j in acm_out[tpid]) {
+                            if (j!='ccount') {
+                                ht+='<table class="blueTable">';
+                                ht+='<tr>';
+                                ht+='<td class="cLabel" style="width:70%;">' + acl_out[j]['ctitle'] + '</td>';
+                                ht+='<td>' + acl_out[j]['cclass'] + '</td>';
+                                ht+='</tr>';
+                                ht+='<tr>';
+                                if (acl_out[j]['crole']  == null) {
+                                    var crt="No description available";
+                                } else {
+                                    var crt=acl_out[j]['crole']
+                                }
+                                ht+='<td colspan="2">' + crt + '</td>';
+                                ht+='</tr>';
+                                ht+="</table>";
+                            }
+                        }
+
+                    } 
+                    return ht;  
+                }
+                                                
+                function rt( tc, tcl) {  // build tables of current and previous roles 
+                    var t='<h3>' + tcl + '</h3>'
+                    var HasNoCRole = true, HasNoPRole = true;
+                    var tabc = '<h4>Current</h4><table class="blueTable">'
+                    var tabp = '<h4>Previous</h4><table class="blueTable">'
+                    if (tc!==null) {
+                        for (var k=0; k<tc.length; k++) {
+                            if (tc[k]['EndDate']==null) {
+                                HasNoCRole = false;
+                                tabc+='<tr><td style="width:70%;">'+tc[k]['Name'] + '</td><td>Since ' + $.formatDateTime("d M yy", new Date(tc[k]['StartDate']))
+                                tabc+='</td></tr>'
+                                a_over.roles[tcl].c++;
+                                
+                            } 
+
+                            if (tc[k]['EndDate']!==null) {
+                                HasNoPRole = false;
+                                tabp+='<tr><td style="width:70%;">'+tc[k]['Name'] + '</td><td>From ' + $.formatDateTime("d M yy", new Date(tc[k]['StartDate'])) + ' to ' + $.formatDateTime("d M yy", new Date(tc[k]['EndDate']));
+                                tabc+='</td></tr>'
+                                a_over.roles[tcl].p++;
+                                
+                            }
+                        }
+                        tabc+='</table>';
+                        tabp+='</table>';
+                        
+                    }
+                    if (HasNoCRole && HasNoPRole) { 
+                        t += '<p>No current or previous ' + tcl + '</p>';
+                    }  else {
+                        if (HasNoCRole) {
+                            t += '<p>No current ' + tcl + '</p>';
+                        } else {
+                            t+=tabc;
+                        }
+                        if (HasNoPRole) {
+                            t += '<p>No previous ' + tcl + '</p>';
+                        } else {
+                            t+=tabp;
+                        }
+                    }                    
+                    return t
+
+                } // rt
+
+                
+                function getQuestions( tmid, inHouse) {
+                    $('<span class="isloading">Loading</span>').appendTo('#Questions');
+                    $('<span class="isloading">Loading</span>').appendTo('#Interests');
+                    var wqUrl = 'https://writtenquestions-api.parliament.uk/api/writtenquestions/questions?askingMemberId='+tmid + '&take=500';
+                    var wsUrl = 'https://writtenquestions-api.parliament.uk/api/writtenstatements/statements?members=' +tmid + '&take=500';
+                    var riUrl = 'https://members-api.parliament.uk/api/Members/' + tmid + '/RegisteredInterests'
+
+                    var r_wq = setAjax( wqUrl )
+                    var r_ws= setAjax( wsUrl );
+                    var r_ri= setAjax( riUrl );
+                    
+                    if (inHouse == 'Commons') {
+                        var oqUrl = 'https://lda.data.parliament.uk/commonsoralquestions.json?_view=Commons+Oral+Questions&_pageSize=500&mnisId=' + tmid;
+                        //var oqUrl ='https://oralquestionsandmotions-api.parliament.uk/oralquestions/list?parameters.askingMemberIds=' + tmid + '&parameters.take=100';
+                        var r_oq = $.getJSON( oqUrl, function( data ) {
+                            console.log( data );
+                        })
+                        $.when( r_wq, r_ws, r_oq, r_ri ).done(function ( d_wq, d_ws, d_oq, d_ri  ) {
+                            procQData( d_wq, d_ws, d_oq, d_ri  )
+                        });
+                    }
+                    if (inHouse == 'Lords') {
+                        var oqUrl=null;
+                        $.when( r_wq, r_ws, r_ri ).done(function ( d_wq, d_ws, d_ri  ) {
+                            procQData( d_wq, d_ws, null, d_ri  )
+                        });
+
+                    }
+                } // getQuestions( tmid, inHouse)
+
+                function procQData( d_wq, d_ws, d_oq, d_ri  ) {
+                    var ht='';
+                    var tres=0;
+                    cntQ=0;
+                    cntS=0;
+                    var cnt_i=0;
+
+                    // process registered interests
+                    var ti=d_ri[0].value;
+                    a_over.registeredInterests=0;
+                    if (ti.length == 0) {
+                        $('<p>No registered interests.</p>').appendTo('#Interests');
+                    } else {
+                        var ht='<table id="rInterests" class="display compact"><thead>';
+                        ht+= '<th>Interest category</th>'
+                        ht+= '<th>Interest</th>'
+                        ht+= '<th>Date last amended</th>'
+                        //ht+= '<th>Date deleted</td></th>'
+                        ht+= '</thead><tbody>';
+                        for (var i=0; i<ti.length; i++) {
+                           
+                            for (var j=0; j<ti[i]['interests']['length']; j++) {
+                                ht+='<tr>';
+                                ht+= '<td>' + ti[i].name + '</td>';
+                                ht+= '<td>' + ti[i]['interests'][j]['interest'] + '</td>';
+                                ht+= '<td>' +  $.formatDateTime("d M yy", new Date( ti[i]['interests'][j]['lastAmendedWhen'])) + '</td>';
+                                /*
+                                if (ti[i]['interests'][j]['deletedWhen'] == null) {
+                                    ht+= '<td>Not deleted</td>';
+                                } else {
+                                    ht+=  '<td>' +  $.formatDateTime("d M yy", new Date(ti[i]['interests'][j]['deletedWhen'])) + '</td>';
+                                }
+                                */
+                                ht+='</tr>';
+                                cnt_i++;
+
+                            }
+
+                        }
+                        a_over.registeredInterests=cnt_i;
+                        ht+= '</tbody>'
+                        ht+= '</table>'
+                        $(ht).appendTo('#Interests');
+                        $('#rInterests').dataTable({
+                            "scrollY":        "400px",
+                            "scrollCollapse": true,
+                            "paging":         false,
+                        rowGroup: {
+                            dataSrc: 0
+                        },
+                        "columnDefs": [
+                            {
+                                "targets": [ 0 ],
+                                "visible": false
+                            }]
+                        } );
+                    }
+                    var ht='';
+                   
+                    if (d_wq[0].totalResults == 0) {
+                        ht+='<h4>Written Questions</h4><p>No written questions.<p>';   
+                    } else {
+                        tres+=d_wq[0].totalResults;
+                        cntQ+=d_wq[0].totalResults;
+                        a_over.qands.w=d_wq[0].totalResults;
+                    }
+
+                    if (d_ws[0].totalResults == 0) {
+                        ht+='<h4>Written Ministerial Statements</h4><p>No written statements.<p>';
+                    } else {
+                        tres+=d_ws[0].totalResults;
+                        cntS+=d_ws[0].results.length;
+                        a_over.qands.s=d_ws[0].totalResults;
+                    }
+                    if (d_oq==null) {
+                        ht+='<h4>Oral Questions</h4><p>No oral questions.</p>';
+                    } else {
+                        tres+=d_oq[2].responseJSON.result.items.length;
+                        cntQ+=d_oq[2].responseJSON.result.items.length;
+                        a_over.qands.o=d_oq[2].responseJSON.result.items.length;
+                    }
+                    var wq_out = trimQs( d_wq[0].results, inHouse, "Written");
+                    var ws_out = trimQs( d_ws[0].results, inHouse, "WMS");
+                    
+                    var oq_out = null;
+                    if (d_oq !== null) { oq_out = trimQs( d_oq[2].responseJSON.result.items, inHouse, "Oral");                        }
+                    
+                    if (tres>0) {
+                        drawQuestions( wq_out, ws_out, oq_out, ht )
+                    }
+                    $('.isloading').remove();
+                    drawOverview();
+                }
+
+                function drawOverview() {
+                    var tc;
+                    var ht='<a id="l_ri"></a><table class="blueTable">'
+                    ht+='<tr>';
+                    ht+='<td class="oblock" colspan="2">Registered interests</td>'
+                    ht+='<td class="oblock" colspan="2">Committee membership</td>'
+                    ht+='<td class="oblock" colspan="3">Statements and questions</td>'
+                    ht+='<td class="oblock" colspan="4">Roles</td>'
+                    ht+='</tr>';
+                    ht+='<tr>';
+                    ht+='<td rowspan="3">Number of Registered interests</td>'
+                    if (a_over.registeredInterests == 0) {tc="oczero" } else { tc="oc"};
+                    ht+='<td rowspan="3" class="' + tc + '">' + a_over.registeredInterests + '</td>';
+                    // committee membership
+                    ht+='<td rowspan="3"><a href="#l_committees">Number of Committees</a></td>'
+                    if (a_over.commmittees == 0) {tc="oczero" } else { tc="oc"};
+                    ht+='<td rowspan="3" class="' + tc + '">' + a_over.commmittees + '</td>';
+
+                    // written questions
+                    ht+='<td rowspan="2"><a href="#l_qands">Number of Questions asked</a></td>';
+                    ht+='<td>Written</td>';
+                    if (a_over.qands.w == 0) {tc="oczero" } else { tc="oc"};
+                    ht+='<td class="' + tc + '">' + a_over.qands.w + '</td>';
+
+                    // government roles
+                    ht+='<td rowspan="3"><a href="#l_roles">Number of Roles</a></td>';
+                    ht+='<td>Government</td>';
+                    ht+='<td>Current<br>Previous</td>';
+                    if (a_over.roles.Government.c == 0 && a_over.roles.Government.p == 0 ) {tc="oczero" } else { tc="oc"};
+                    ht+='<td class="' + tc + '">' + a_over.roles.Government.c + '<br>' +  a_over.roles.Government.p + '</td>';
+                    ht+='</tr>';
+                    ht+='<tr>';
+
+                    // oral questions
+                    ht+='<td>Oral</td>';
+                    if (a_over.qands.o == 0) {tc="oczero" } else { tc="oc"};
+                    ht+='<td class="' + tc + '">' + a_over.qands.o + '</td>';
+
+                    // opposition roles
+                    ht+='<td>Opposition</td>';
+                    ht+='<td>Current<br>Previous</td>';
+                    if (a_over.roles.Opposition.c == 0 && a_over.roles.Opposition.p == 0 ) {tc="oczero" } else { tc="oc"};
+                    ht+='<td class="' + tc + '">' + a_over.roles.Opposition.c + '<br>' +  a_over.roles.Opposition.p + '</td>';
+                    ht+='</tr>';
+                    ht+='<tr>';
+
+                    // written ministerial statements
+                    ht+='<td colspan="2">Written Ministerial statements</td>';
+                    if (a_over.qands.s == 0) {tc="oczero" } else { tc="oc"};
+                    ht+='<td class="' + tc + '">' + a_over.qands.s + '</td>'; 
+                    
+                    // parliamentary roles
+                    ht+='<td>Parliamentary</td>';
+                    ht+='<td>Current<br>Previous</td>';
+                    if (a_over.roles.Parliamentary.c == 0) {tc="oczero" } else { tc="oc"};
+                    ht+='<td class="' + tc + '">' + a_over.roles.Parliamentary.c + '<br>' +  a_over.roles.Parliamentary.p + '</td>';
+                    ht+='</tr>';
+                    ht+='</table>';
+                    $(ht).appendTo('#Overview');
+                    $('#l_top').focus();
+                    window.scrollTo(0, 0);
+                } // drawOverview();
+
+                function drawQuestions( wq_in, ws_in, oq_in, htp ) {
+                    
+                    drawQChart(wq_in, ws_in, oq_in);
+                    // written ministerial statements
+                    if (ws_in.length > 0) {
+                        ws_in.sort( function (a,b) { return b.tabled - a.tabled });
+                        var ht='<h4>Written Ministerial Statements</h4><table id="mStatements" class="display compact"><thead>';
+                        ht+= '<th>Answering body</th>'
+                        ht+= '<th>Ministerial role</th>'
+                        ht+= '<th>Statement title and text</th>'
+                        ht+= '<th>Tabled on</td></th>'
+                        ht+= '</thead><tbody>'
+                        for (var i=0; i<ws_in.length; i++) {
+                            ht+= '<tr>'
+                            ht+= '<td>' + ws_in[i]['ansBody'] + '</td>';
+                            ht+= '<td>' + ws_in[i]['tabling_member'] + '</td>';
+                            ht+= '<td>' + ws_in[i]['title'] + '</br>' + ws_in[i]['text'] + '</td>';
+                            ht+= '<td>' + $.formatDateTime("d M yy", ws_in[i]['tabled']) + '</td>';
+                            ht+= '</tr>'
+                        }
+                        ht+= '</tbody>'
+                        ht+= '</table>'
+                    }
+                    $(ht).appendTo('#Questions');
+                    $('#mStatements').dataTable({
+                        "scrollY":        "400px",
+                        "scrollCollapse": true,
+                        "paging":         false,
+                        rowGroup: {
+                            dataSrc: 0
+                        },
+                        "columnDefs": [
+                            {
+                                "targets": [ 0 ],
+                                "visible": false
+                            }]
+                    } );
+
+                    $(htp).appendTo('#Questions');
+
+                    if (oq_in !== null) {
+                        wq_in=wq_in.concat(oq_in);
+                    }
+                    
+                    wq_in.sort( function (a,b) { return b.tabled - a.tabled });
+                    var ht='<h4>Written and oral questions</h4><table id="mQuestions" class="display compact"><thead>';
+                    ht+= '<th>Answering body</th>'
+                    ht+= '<th>W or O</th>'
+                    ht+= '<th>Question text</th>'
+                    ht+= '<th>Tabled on</td></th>'
+                    ht+= '</thead><tbody>'
+                    
+                    for (var i=0; i<wq_in.length; i++) {
+                        ht+= '<tr>'
+                        ht+= '<td>' + wq_in[i]['ansBody'] + '</td>';
+                        if (wq_in[i]['qclass'] == 'Written') {
+                            var scol = '<div style="background-color: grey; color: white; width: 20px;">W</div>';
+                        } else {
+                            var scol = '<div style="background-color: teal; color: white; width: 20px;">O</div>';
+                        }
+                        ht+= '<td>' + scol + '</td>';
+                        ht+= '<td>' + wq_in[i]['text'] + '</td>';
+                        ht+= '<td>' + $.formatDateTime("d M yy", wq_in[i]['tabled']) + '</td>';
+                        ht+= '</tr>'
+                    }
+                    ht+= '</tbody>'
+                    ht+= '</table>'
+                    $(ht).appendTo('#Questions');
+                    $('#mQuestions').dataTable({
+                        "scrollY":        "400px",
+                        "scrollCollapse": true,
+                        "paging":         false,
+                        rowGroup: {
+                            dataSrc: 0
+                        },
+                        "columnDefs": [
+                            {
+                                "targets": [ 0 ],
+                                "visible": false
+                            }]
+                    } );
+                }
+
+                function trimQs( a_in, inHouse, qclass) {
+                    var a_out=[];
+                    for (var i=0; i<a_in.length; i++) {
+
+                        var rout = {
+                            status: null,
+                            text: null,
+                            tabled: null,
+                            ansBody: null,
+                            tabling_member: null,
+                            qclass: qclass,
+                            inHouse: inHouse,
+                            uin: null,
+                            answered: null,
+                            answerText: null
+                        }
+                        
+                        if (qclass=='WMS') { // Written ministerial statements
+                            rout.text=a_in[i].value.text;
+                            rout.title=a_in[i].value.title;
+                            rout.tabled=new Date( a_in[i].value.dateMade );
+                            rout.ansBody=a_in[i].value.answeringBodyName;
+                            rout.tabling_member=a_in[i].value.memberRole;
+                            rout.noticeNumber=a_in[i].value.noticeNumber;
+                            rout.uin= a_in[i].value.uin;
+                            if (a_in[i].value.dateAnswered !== null) {
+                                rout.answered=new Date( a_in[i].value.dateAnswered )
+                                rout.answerText=a_in[i].value.answerText
+                            }
+                        }
+                        if (qclass=='Written') {                         // Written questions
+                            rout.text=a_in[i].value.questionText;
+                            rout.tabled=new Date( a_in[i].value.dateTabled );
+                            rout.ansBody=a_in[i].value.answeringBodyName;
+                            rout.tabling_member=a_in[i].value.askingMemberId;
+                            rout.uin= a_in[i].value.uin;
+                            if (a_in[i].value.dateAnswered !== null) {
+                                rout.answered=new Date( a_in[i].value.dateAnswered )
+                                rout.answerText=a_in[i].value.answerText
+                            }
+                        }
+                        if (qclass=='Oral') { // Oral questions
+                            rout.text=a_in[i].questionText + ' <i>' + a_in[i].QuestionStatus._value + '</i>';
+                            rout.status=a_in[i].QuestionStatus._value;
+                            rout.tabled=new Date( a_in[i].dateTabled._value );
+                            rout.ansBody = a_in[i].AnsweringBody[0]._value;
+                            rout.tabling_member=a_in[i].tablingMemberPrinted[0]._value;
+                            rout.uin= a_in[i].uin;
+                            if (a_in[i].AnswerDate._value !== null) {
+                                rout.answered=new Date( a_in[i].AnswerDate._value )
+                                //rout.answerText=a_in[i].value.answerText
+                            }
+                        }
+                        a_out.push( rout );
+                    }
+                    return a_out;
+
+                } // trimQs( a_in, inHouse, cclass)
+
+                function  drawQChart(wq_in, ws_in, oq_in ) {
+             
+                    var wqc=wq_in.length
+                    if ( typeof(oq_in) == 'object' && oq_in !== null) {  // combine written and oral questions into a single array
+                        wq_in=wq_in.concat( oq_in );
+                    }
+                    var cs=prepCData ( wq_in, ['#d53e4f','#fc8d59','#fee08b','#ffffbf','#e6f598','#99d594','#3288bd'] );
+                    var cs_ws = prepCData ( ws_in, ['#edf8fb','#bfd3e6','#9ebcda','#8c96c6','#8c6bb1','#88419d','#6e016b'] );
+                    cs=cs.concat(cs_ws);
+                    var ct='';
+                    var hasQ = false;
+                    if (wq_in.length>0 && oq_in !== null) {
+                        ct+= 'Written (' + wqc + ') and Oral (' + oq_in.length + ') questions'
+                         hasQ=true;
+                    } else {
+                        if (wq_in.length>0) {
+                            ct+= 'Written questions (' + wqc + ')'
+                            hasQ=true;
+                        }
+                        if (oq_in !== null) {
+                            if (hasQ) {
+                                ct+=', '
+                            }
+                            ct+= 'Oral questions (' + oq_in.length + ') '
+                            hasQ=true;
+                        }
+                    }
+                    if (ws_in.length>0) {
+                        if (hasQ) {
+                            ct += ' and '
+                        }
+                        ct+= 'Ministerial statements (' + ws_in.length + ')'
+                    }
+
+
+                    Highcharts.chart('qChart', {
+                        chart: {
+                            type: 'column',
+                            zoomType: 'x'
+                        },
+                        legend: { enabled: false},
+                        credits: {enabled: false},
+                        title: {  text: ct },
+                        subtitle: {text: 'by answering body' },
+                        xAxis: {
+                            type: 'datetime',
+                            dateTimeLabelFormats: { 
+                                //month: '%e. %b %Y',
+                                year: '%Y'
+                            },
+                            title: { text: 'Date'},
+                            labels: { format: '{value:%b-%Y}' }
+                        },
+                        yAxis: {
+                            title: {text: 'No of questions'
+                            },
+                            min: 0
+                        },
+                        tooltip: {
+                            headerFormat: '<b>{series.name}</b><br>',
+                            pointFormat: '{point.x: %b %Y}: {point.y} questions'
+                        },
+                        plotOptions: {
+                            column: {
+                                stacking: 'normal',
+                                dataLabels: {
+                                    enabled: false
+                                }
+                            },
+                            series: {pointWidth: 15 }
+                        },
+                        series: cs,
+                        responsive: {
+                            rules: [{
+                                condition: {
+                                    maxWidth: 500
+                                },
+                                chartOptions: {
+                                    plotOptions: {
+                                        series: {
+                                            marker: {
+                                                radius: 2.5
+                                            }
+                                        }
+                                    }
+                                }
+                            }]
+                        }
+                    });
+                    $('#ccdesc').text('Where data is available, the chart above shows numbers of written and oral questions asked, and (in purple) the 20 most recent Written Ministerial Statements. Click and drag in the chart to zoom in and inspect the data.  See tables below for lists of questions asked and statements made.')
+                } // drawQChart(wq_in, ws_in) 
+
+
+                function prepCData ( wq_in, cr ) {
+
+                    var cs=[], spos=null;
+                    for (var i=0; i<wq_in.length; i++) {
+                        var tDept=wq_in[i].ansBody;
+                        var hasNoSeries=true;
+                        for (var j=0; j<cs.length; j++) {
+                            if (cs[j].name == tDept) {hasNoSeries=false, spos=j}
+                        }
+                        if (hasNoSeries) {
+                            cs.push({name: tDept, data: [], data_in: []});
+                            spos=cs.length-1;
+                        }
+                        var tDate = wq_in[i].tabled;
+                        var tod=Date.UTC( tDate.getUTCFullYear(), tDate.getUTCMonth(), 1 ) // aggregate by year and month only
+                        var t_tod='d'+tod;
+                       
+                        if (typeof( cs[spos]['data_in'][t_tod] ) == 'undefined') {
+                            cs[spos]['data_in'][t_tod] = 1;
+                        } else {
+                            cs[spos]['data_in'][t_tod]++; 
+                        }
+                    }
+
+                    var cRange=chroma.scale(cr).colors(cs.length);
+
+                    // POPULATE data arrays
+                    for (var i=0; i<cs.length; i++) {
+                        cs[i].color = cRange[i];
+                        var td=cs[i]['data_in'] 
+                        for (var j in td) {
+                            var tn=parseInt( j.substring(1, j.length))
+                            var ta=[tn,td[j] ]
+                            cs[i]['data'].push(ta); 
+                        }
+                    }
+                    return cs;
+                } // prepCData ( wq_in, cr )
+
+                function setAjax( url ) {
+                    //if (url==null) {return null};
+                    var settings = {
+                        'cache': false,
+                        'dataType': "json",
+                        "async": true
+                        //,"crossDomain": true,
+                        ,"url": url,
+                        "method": "GET",
+                        "headers": {
+                            "accept": "application/json"
+                            //,"Access-Control-Allow-Origin":"*"
+                        }
+                    }
+
+                    var request = $.ajax(settings).done(function (response) {
+                        console.log(response);
+
+                    });
+
+                    return request;
+                } // setAjax( url )
+
+                function cd( tdate ) {
+                    var rd=new Date(tdate)
+                    if (typeof(tdate) == 'object') {
+                        var rd=null
+                    }
+                    return rd;
+                }
+
+            } // showDetails(tpid)
+            function getRndInteger(min, max) {
+                return Math.floor(Math.random() * (max - min) ) + min;
+            }
+
+        } // drawViz();
+    </script>
+</head>
+
+<body>
+    <header style="width:1100px; margin-left:auto; margin-right: auto;">
+        <h1>Know your member</h1>
+        <p style="float: right; width: 400px; margin-top: -40px !important;">
+            An open data experiment by <a target="_blank" href="https://twitter.com/SemanticSteve">@SemanticSteve</a>.
+            Mostly powered by APIs from <a href="https://developer.parliament.uk/" target="_blank">the UK Parliament developer hub</a>
+        </p>
+
+        <h2>Explore the work of members of the houses of commons and lords</h2>
+    </header>
+    
+    <table style="width:1100px; margin-left:auto; margin-right: auto;">
+        <tr>
+            <td style="vertical-align: top;">
+                <div id='mplist'>
+                    <span id="presel"></span>
+                    <input id="MP">
+                    <span class="loading" id="loading">  </div>
+                </div>
+                <div id="alist"></div>
+            </td>
+            <td><div style="width: 50px;"></div></td>
+            <td style="vertical-align: top;">
+                <div id="msumm"></div>
+                <div id="cmem"></div>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
