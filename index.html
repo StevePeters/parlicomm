@@ -11,7 +11,7 @@
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="jquery.formatDateTime.min.js"></script>
     <script src="js/datatables.min.js"></script>
-    <script src="js/code/highcharts.js"></script>
+    <script src="js/highcharts.js"></script>
     <script src="js/chroma.min.js"></script>
     <script src="js/colorbrewer.v1.js"></script>
     
@@ -19,7 +19,7 @@
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
     <link href='https://fonts.googleapis.com/css?family=Bree+Serif' rel='stylesheet' type='text/css'> 
     <link href='js/datatables.css' rel='stylesheet' type='text/css'> 
-    <link href='js/code/css/highcharts.css' rel='stylesheet' type='text/css'> 
+    <link href='js/highcharts.css' rel='stylesheet' type='text/css'> 
     <link href='kym.css' rel='stylesheet' type='text/css'> 
     
     <script>
@@ -86,7 +86,7 @@
              });
         
             var parties_in = $.ajax({
-            url: 'http://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/Parties/',
+            url: 'https://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/Parties/',
                 dataType: "json",
                 done: function (data) { console.log(data);},
                 error: function(xhr, status, error) {
@@ -97,7 +97,7 @@
             });
 
             var committee_types_in = $.ajax({
-            url: 'http://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/CommitteeTypes/',
+            url: 'https://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/CommitteeTypes/',
                 dataType: "json",
                 done: function (data) { console.log(data);},
                 error: function(xhr, status, error) {
