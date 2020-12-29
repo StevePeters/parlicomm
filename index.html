@@ -463,7 +463,9 @@
                     var ti=d_ri[0].value;
                     a_over.registeredInterests=0;
                     if (ti.length == 0) {
-                        $('<p>No registered interests.</p>').appendTo('#Interests');
+                        var nr= '<p>No data on registered interests found via the API'
+                        nr+='. For MPs, please check the <a target="_blank" href="https://publications.parliament.uk/pa/cm/cmregmem/contents1921.htm">Register of Members Financial Interests - 2019 Parliament</a></p>'
+                        $(nr).appendTo('#Interests');
                     } else {
                         var ht='<table id="rInterests" class="display compact"><thead>';
                         ht+= '<th>Interest category</th>'
