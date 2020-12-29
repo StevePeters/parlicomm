@@ -19,11 +19,14 @@ def gnp( url  ): # get list of committees
     # process committees in current page
     clist=soup.find_all("a", {"class": "card-committee"})
     for tc in clist:
-        tl=tc['href'] 
-        ct=tl.replace("/committee/","")
-        cid=int(ct[:ct.find('/')])
-        tr={'id': cid, 'url': "https://committees.parliament.uk"  +  tl}
-        list_cpage.append( tr )
+        tl=tc['href']
+        isOld=tl.find('old.parliament')
+        if isOld==-1:
+            print( tc )
+            ct=tl.replace("/committee/","")
+            cid=int(ct[:ct.find('/')])
+            tr={'id': cid, 'url': "https://committees.parliament.uk"  +  tl}
+            list_cpage.append( tr )
        
     
     # look for next page of committees

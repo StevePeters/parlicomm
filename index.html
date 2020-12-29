@@ -21,7 +21,6 @@
     <link href='js/datatables.css' rel='stylesheet' type='text/css'> 
     <link href='js/highcharts.css' rel='stylesheet' type='text/css'> 
     <link href='kym.css' rel='stylesheet' type='text/css'> 
-    
     <script>
         
         $( document ).ready( drawViz );
@@ -463,7 +462,9 @@
                     var ti=d_ri[0].value;
                     a_over.registeredInterests=0;
                     if (ti.length == 0) {
-                        $('<p>No registered interests.</p>').appendTo('#Interests');
+                        var nr= '<p>No data on registered interests found via the API'
+                        nr+='. For MPs, please check the <a target="_blank" href="https://publications.parliament.uk/pa/cm/cmregmem/contents1921.htm">Register of Members Financial Interests - 2019 Parliament</a></p>'
+                        $(nr).appendTo('#Interests');
                     } else {
                         var ht='<table id="rInterests" class="display compact"><thead>';
                         ht+= '<th>Interest category</th>'
@@ -670,7 +671,16 @@
                             var scol = '<div style="background-color: teal; color: white; width: 20px;">O</div>';
                         }
                         ht+= '<td>' + scol + '</td>';
-                        ht+= '<td>' + wq_in[i]['text'] + '</td>';
+                        ht+= '<td>';
+                        ht+= wq_in[i]['text']
+                        var anst='';
+                        if (typeof wq_in[i]['answerText'] !== 'undefined'  && wq_in[i]['answerText'] !== null) {
+                            var anst='<div class="zoomin"><img src="zoom-in.jpg" alt="show/hide answer to question"/></div>';
+                            anst+= '<div class="qans">' + wq_in[i]['answerText'] + '<br><i>' + 'Answered on ' + $.formatDateTime("d M yy", wq_in[i]['answered']) +'</i></div>';
+
+                        }
+                        ht+=anst;
+                        ht+='</td>';
                         ht+= '<td>' + $.formatDateTime("d M yy", wq_in[i]['tabled']) + '</td>';
                         ht+= '</tr>'
                     }
@@ -690,6 +700,8 @@
                                 "visible": false
                             }]
                     } );
+                    $('.qans').toggle();
+                    $('.zoomin').click( function (e) { $(this).closest('div').next('.qans').toggle(); });
                 }
 
                 function trimQs( a_in, inHouse, qclass) {
@@ -920,6 +932,14 @@
             }
 
         } // drawViz();
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-T8VLDJ1NMN"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-T8VLDJ1NMN');
     </script>
 </head>
 
