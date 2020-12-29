@@ -21,7 +21,6 @@
     <link href='js/datatables.css' rel='stylesheet' type='text/css'> 
     <link href='js/highcharts.css' rel='stylesheet' type='text/css'> 
     <link href='kym.css' rel='stylesheet' type='text/css'> 
-    
     <script>
         
         $( document ).ready( drawViz );
@@ -672,7 +671,16 @@
                             var scol = '<div style="background-color: teal; color: white; width: 20px;">O</div>';
                         }
                         ht+= '<td>' + scol + '</td>';
-                        ht+= '<td>' + wq_in[i]['text'] + '</td>';
+                        ht+= '<td>';
+                        ht+= wq_in[i]['text']
+                        var anst='';
+                        if (typeof wq_in[i]['answerText'] !== 'undefined'  && wq_in[i]['answerText'] !== null) {
+                            var anst='<div class="zoomin"><img src="zoom-in.jpg" alt="show/hide answer to question"/></div>';
+                            anst+= '<div class="qans">' + wq_in[i]['answerText'] + '<br><i>' + 'Answered on ' + $.formatDateTime("d M yy", wq_in[i]['answered']) +'</i></div>';
+
+                        }
+                        ht+=anst;
+                        ht+='</td>';
                         ht+= '<td>' + $.formatDateTime("d M yy", wq_in[i]['tabled']) + '</td>';
                         ht+= '</tr>'
                     }
@@ -692,6 +700,8 @@
                                 "visible": false
                             }]
                     } );
+                    $('.qans').toggle();
+                    $('.zoomin').click( function (e) { $(this).closest('div').next('.qans').toggle(); });
                 }
 
                 function trimQs( a_in, inHouse, qclass) {
