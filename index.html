@@ -61,51 +61,11 @@
                 }
              });
              */
-            // get list of all current MPs for auto select
-            var members_hc_in = $.ajax({
-                url: 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/House=Commons%7CIsEligible=true/ParliamentaryPosts%7CGovernmentPosts%7COppositionPosts/',
-                dataType: "json",
-                done: function (data) {console.log(data);},
-                error: function(xhr, status, error) {
-                    var errorMessage = xhr.status + ': ' + xhr.statusText
-                    alert('Problem loading list of MPs - please try again later');
-                    return;
-                }
-             });
-            // get list of all current Lords for auto select
-             var members_hl_in = $.ajax({
-                url: 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/House=Lords%7CIsEligible=true/ParliamentaryPosts%7CGovernmentPosts%7COppositionPosts/',
-                dataType: "json",
-                done: function (data) {console.log(data);},
-                error: function(xhr, status, error) {
-                    var errorMessage = xhr.status + ': ' + xhr.statusText
-                    alert('Problem loading list of Lords - please try again later');
-                    return;
-                }
-             });
-        
-            var parties_in = $.ajax({
-            url: 'https://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/Parties/',
-                dataType: "json",
-                done: function (data) { console.log(data);},
-                error: function(xhr, status, error) {
-                    var errorMessage = xhr.status + ': ' + xhr.statusText
-                    alert('Problem loading list of Parties - please try again later');
-                    return;
-                }
-            });
-
-            var committee_types_in = $.ajax({
-            url: 'https://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/CommitteeTypes/',
-                dataType: "json",
-                done: function (data) { console.log(data);},
-                error: function(xhr, status, error) {
-                    var errorMessage = xhr.status + ': ' + xhr.statusText
-                    alert('Problem loading list of Committee types - please try again later');
-                    return;
-                }
-            });
-               
+            var members_hc_in       = setAjax( 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/House=Commons%7CIsEligible=true/ParliamentaryPosts%7CGovernmentPosts%7COppositionPosts/', ' current list of MPs');
+            var members_hl_in       = setAjax( 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/House=Lords%7CIsEligible=true/ParliamentaryPosts%7CGovernmentPosts%7COppositionPosts/', ' current list of Lords');
+            var parties_in          = setAjax( 'https://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/Parties/', ' current list of political parties');
+            var committee_types_in  = setAjax( 'https://data.parliament.uk/membersdataplatform/services/mnis/ReferenceData/CommitteeTypes/', 'Current list of committee types')
+           
             $.when( committees_in, cmembers_in, members_hc_in, members_hl_in, parties_in, committee_types_in ).done(function ( cc, cm, c_hm, l_hm, pp, ctypes ) {
                 // transform committees array
                 $("#loading").removeClass("isloading").text('');
@@ -114,11 +74,10 @@
                 if (!hasData) {
                     return;
                 }
-                
-                amp_lookup = c_hm[0]['Members']['Member'];
-                alo_lookup = l_hm[0]['Members']['Member'];
-                pParties = pp[0]['Parties']['Party'];
-                c_types = ctypes[0].CommitteeTypes.CommitteeType;
+                amp_lookup  = c_hm[0]['Members']['Member'];
+                alo_lookup  = l_hm[0]['Members']['Member'];
+                pParties    = pp[0]['Parties']['Party'];
+                c_types     = ctypes[0].CommitteeTypes.CommitteeType;
 
                 dataCommittees=cc[0]['data'];
                 dcurr=new Date(dataCommittees[0]['logged_on']);
@@ -675,7 +634,7 @@
                         ht+= wq_in[i]['text']
                         var anst='';
                         if (typeof wq_in[i]['answerText'] !== 'undefined'  && wq_in[i]['answerText'] !== null) {
-                            var anst='<div class="zoomin"><img src="zoom-in.jpg" alt="show/hide answer to question"/></div>';
+                            var anst='<div class="zoomin"><img src="zoom-in.jpg" alt="show/hide answer to question"/>Click to show the answer to this question</div>';
                             anst+= '<div class="qans">' + wq_in[i]['answerText'] + '<br><i>' + 'Answered on ' + $.formatDateTime("d M yy", wq_in[i]['answered']) +'</i></div>';
 
                         }
@@ -895,28 +854,7 @@
                     return cs;
                 } // prepCData ( wq_in, cr )
 
-                function setAjax( url ) {
-                    //if (url==null) {return null};
-                    var settings = {
-                        'cache': false,
-                        'dataType': "json",
-                        "async": true
-                        //,"crossDomain": true,
-                        ,"url": url,
-                        "method": "GET",
-                        "headers": {
-                            "accept": "application/json"
-                            //,"Access-Control-Allow-Origin":"*"
-                        }
-                    }
-
-                    var request = $.ajax(settings).done(function (response) {
-                        console.log(response);
-
-                    });
-
-                    return request;
-                } // setAjax( url )
+                
 
                 function cd( tdate ) {
                     var rd=new Date(tdate)
@@ -931,6 +869,34 @@
                 return Math.floor(Math.random() * (max - min) ) + min;
             }
 
+            function setAjax( url, setName ) {
+                //if (url==null) {return null};
+                var settings = {
+                    'cache': false,
+                    'dataType': "json",
+                    "async": true
+                    //,"crossDomain": true,
+                    ,"url": url,
+                    "method": "GET",
+                    "headers": {
+                        "accept": "application/json"
+                        //,"Access-Control-Allow-Origin":"*"
+                    }
+                }
+
+                var request = $.ajax(settings).done(
+                    function (response) { 
+                        console.log(response);
+                    }
+                ).fail( function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    alert(errorMessage + '- please try again later');
+                    return;
+                });
+
+                return request;
+            } // setAjax( url )
+
         } // drawViz();
     </script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-T8VLDJ1NMN"></script>
@@ -941,6 +907,7 @@
     
       gtag('config', 'G-T8VLDJ1NMN');
     </script>
+
 </head>
 
 <body>
