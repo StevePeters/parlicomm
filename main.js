@@ -207,7 +207,7 @@ function drawViz() {
         function get_showCommittees( tmid ) {
             
             a_over['commmittees'] =0;
-            var tpcUrl = 'http://data.parliament.uk/membersdataplatform/services/mnis/members/query/id=' + tmid + '/Committees/'
+            var tpcUrl = 'https://data.parliament.uk/membersdataplatform/services/mnis/members/query/id=' + tmid + '/Committees/'
             var r_mcm = setAjax( tpcUrl);
             $.when( r_mcm ).done(function ( d_rcm ) {
                 var tcset = d_rcm.Members.Member.Committees.Committee;
@@ -260,7 +260,7 @@ function drawViz() {
                 function getMissingCommittees( s, tpc_missing, tpc_membership ) {
                     $('<div id="cload" class="isloading">Getting data for ' + (s+1)  + ' of ' + tpc_missing.length + ' committees</div>').appendTo('#Committees');
                     var tpcid = tpc_missing[s];
-                    var tcUrl = 'http://data.parliament.uk/membersdataplatform/services/mnis/Committee/' + tpcid.replace('c','') +  '/Current/';
+                    var tcUrl = 'https://data.parliament.uk/membersdataplatform/services/mnis/Committee/' + tpcid.replace('c','') +  '/Current/';
                     var r_com = setAjax(tcUrl);
                     $.when( r_com ).done(function ( d_com ) { 
                         // add details to master array
